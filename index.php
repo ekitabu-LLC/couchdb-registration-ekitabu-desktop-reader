@@ -8,15 +8,22 @@ else {
 	die("there was no env file, please create ./env.php");
 }
 
+$output = [
+    "success" => true,
+    "extraInfo" => "",
+];
+
 $loginUser = getenv('LOGIN_USERNAME');
 $password = getenv('LOGIN_PASSWORD');
 $newUser = $_GET['dvuuid'];
 $newUserPassword = random_str(30);
 
+$databaseName =  "analyticsdb_" . $newUser;
+
 $usersUrl = "_users/org.couchdb.user:";
 
 define('CREATE_USER_URL' ,getenv('HOST') . $usersUrl . $newUser);
-define('DATABASE_URL' ,getenv('HOST') . $newUser);
+define('DATABASE_URL' ,getenv('HOST') . $databaseName);
 
 $curl = curl_init();
 
@@ -43,9 +50,17 @@ $err = curl_error($curl);
 curl_close($curl);
 
 if ($err) {
-  echo "cURL Error #:" . $err;
+  //echo "cURL Error #:" . $err;
+  $output["success"] = false;
+  $output["message"] = "Failed to create a new user. ERROR: " . $err;
 } else {
-  echo $response;
+  //echo $response;
+  $output["extraInfo"] .= $response;
+}
+
+if ($output["success"]) 
+{
+    $output["password"] = $newUserPassword;
 }
 
 $createDatabaseCurl = curl_init();
@@ -69,9 +84,12 @@ $err = curl_error($createDatabaseCurl);
 curl_close($createDatabaseCurl);
 
 if ($err) {
-  echo "cURL Error #:" . $err;
+  //echo "cURL Error #:" . $err;
+  $output["success"] = false;
+  $output["message"] .= "Failed to create a database for the user. ERROR: " . $err .".  " ;
 } else {
-  echo $response;
+  //echo $response;
+  $output["extraInfo"] .= $response;
 }
 
 
@@ -102,11 +120,15 @@ $err = curl_error($updatePermissionCurl);
 curl_close($updatePermissionCurl);
 
 if ($err) {
-  echo "cURL Error #:" . $err;
+  //echo "cURL Error #:" . $err;
+  $output["success"] = false;
+  $output["message"] .= "Failed to set permissions on the database for the user. ERROR: " . $err .".  " ;
 } else {
-  echo $response;
+  //echo $response;
+  $output["extraInfo"] .= $response;
 }
 
+echo(json_encode($output));
 
 function random_str(
     $length,
